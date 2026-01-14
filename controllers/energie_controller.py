@@ -59,3 +59,60 @@ class EnergieController:
     
     def simulation_coupure(self, duree_heures):
         return f"Coupure JIRAMA detectee : bascule sur groupe electrogene pendant {duree_heures}h"
+    
+    # detecte les equipements gourmand
+    def alertes_consommation(self, seuil_kwh):
+        cursor = self.consommation_model.conn.cursor()
+        cursor.execute("""
+        SELECT e.nom, SUM(c.kwh) AS total
+        FROM consommation c
+        JOIN equipements e ON c.equipement_id = e.id
+        GROUP BY e.nom
+        HAVING total > ?
+        """,
+        (seuil_kwh,)
+        )
+        return cursor.fetchall()
+    
+    def consommation_pendant_coupure(self):
+        cursor = self.consommation_model.conn.cursor()
+        cursor.execute("""
+        SELECT c.date, c.kwh
+        FROM consommation c
+        JOIN coupures cp
+        ON c.date BETWEEN cp.debut AND cp.fin
+        """)
+        return cursor.fetchall()
+    
+    def enregistrer_coupure(self, debut, fin):
+        duree = (fin - debut).total_seconds() / 3600
+        cursor = self.consommation_model.conn.cursor()
+        cursor.execute("""
+        INSERT INTO coupures (debut, fin, duree)
+        VALUES (?, ?, ?)
+        """,
+        (debut, fin, duree)
+        )
+        self.consommation_model.conn.commit()
+    
+    def consommation_par_source_graph(self):
+        cursor = self.consommation_model.conn.cursor()
+        cursor.execute("""
+        SELECT s.nom, SUM(c.kwh) AS total
+        FROM consommation c
+        JOIN sources s ON c.source_id = s.id
+        GROUP BY s.nom
+        """)
+        return cursor.fetchall()
+
+    def score_efficacite(self):
+        cursor = self.consommation_model.conn.cursor()
+        cursor.execute("SELECT SUM(kwh) FROM consommation")
+        total = cursor.fetchone()[0] or 0
+
+        if total < 50:
+            return "🟢 Très efficace"
+        elif total < 150:
+            return "🟠 Moyenne"
+        else:
+            return "🔴 Mauvaise efficacité"

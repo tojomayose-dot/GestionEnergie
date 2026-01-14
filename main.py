@@ -1,5 +1,9 @@
-from models.database import Database
+import sys
+from PyQt6.QtWidgets import QApplication
+from views.main_view import MainView
 
 if __name__ == "__main__":
-    db = Database()
-    print(" prete ,,,")
+    app = QApplication(sys.argv)
+    window = MainView()
+    window.show()
+    sys.exit(app.exec())
