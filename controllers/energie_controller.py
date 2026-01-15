@@ -116,3 +116,12 @@ class EnergieController:
             return "🟠 Moyenne"
         else:
             return "🔴 Mauvaise efficacité"
+
+    def historique_coupures(self):
+        cursor = self.consommation_model.conn.cursor()
+        cursor.execute("""
+            SELECT debut, fin, duree
+            FROM coupures
+            ORDER BY debut DESC
+        """)
+        return cursor.fetchall()
